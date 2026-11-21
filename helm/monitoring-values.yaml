@@ -1,0 +1,15 @@
+fullnameOverride: lab-monitoring
+alertmanager:
+  enabled: false
+nodeExporter:
+  enabled: false
+grafana:
+  fullnameOverride: lab-grafana
+  sidecar:
+    dashboards:
+      enabled: true
+    datasources:
+      uid: prometheus
+prometheus:
+  prometheusSpec:
+    retention: 1d

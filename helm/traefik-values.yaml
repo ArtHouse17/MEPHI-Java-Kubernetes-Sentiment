@@ -1,0 +1,13 @@
+fullnameOverride: traefik
+ingressClass:
+  enabled: true
+  name: traefik
+  isDefaultClass: false
+providers:
+  kubernetesIngress:
+    enabled: true
+  kubernetesCRD:
+    enabled: false
+service:
+  spec:
+    type: ClusterIP

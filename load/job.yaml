@@ -1,0 +1,26 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: sentiment-load
+  namespace: sentiment
+spec:
+  backoffLimit: 0
+  activeDeadlineSeconds: 420
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: k6
+          image: grafana/k6:1.8.3
+          args: ["run", "/scripts/load.js"]
+          env:
+            - name: VUS
+              value: "60"
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+              readOnly: true
+      volumes:
+        - name: script
+          configMap:
+            name: sentiment-load-script
