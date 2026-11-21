@@ -1,10 +1,12 @@
 # Запуск приложения в Minikube
 
-Нужны Docker Desktop, Minikube, kubectl и Helm. Команды выполняются в PowerShell из папки проекта. Docker-образ `sentiment-spring:1.0.0` должен быть собран по [README.md](README.md). Контейнер, запущенный для проверки Docker, перед этим остановите через **Ctrl+C**.
+Для запуска нужны Docker Desktop, Minikube, kubectl и Helm. Откройте PowerShell в папке проекта.
+
+Сначала соберите образ `sentiment-spring:1.0.0` по [README.md](README.md). Если контейнер Docker ещё работает, остановите его через Ctrl+C.
 
 ## 1. Запустить кластер
 
-Откройте Docker Desktop. Затем выполните:
+Откройте Docker Desktop и выполните команды в PowerShell:
 
 ```powershell
 minikube start -p sentiment-lab --driver=docker --cpus=4 --memory=4096
@@ -12,9 +14,9 @@ kubectl config use-context sentiment-lab
 kubectl get nodes
 ```
 
-В выводе должен появиться узел со статусом `Ready`. Здесь используется локальный кластер с одним узлом.
+В списке должен быть один узел со статусом `Ready`. Это значит, что локальный кластер готов к работе.
 
-Включите сбор метрик CPU и загрузите образ приложения в Minikube:
+Включите метрики CPU и загрузите образ из Docker в Minikube:
 
 ```powershell
 minikube addons enable metrics-server -p sentiment-lab
@@ -23,7 +25,7 @@ minikube image load sentiment-spring:1.0.0 -p sentiment-lab
 
 ## 2. Установить Traefik и запустить приложение
 
-Traefik нужен для доступа через Ingress. Helm установит его или обновит существующую установку:
+Установите Traefik для работы Ingress. Если Traefik уже есть, Helm его обновит:
 
 ```powershell
 helm repo add traefik https://traefik.github.io/charts
@@ -31,7 +33,7 @@ helm repo update
 helm upgrade --install traefik traefik/traefik -n ingress --create-namespace -f helm/traefik-values.yaml
 ```
 
-Примените манифесты приложения:
+Запустите приложение:
 
 ```powershell
 kubectl apply -f k8s/namespace.yaml
@@ -39,41 +41,41 @@ kubectl apply -f k8s/app.yaml
 kubectl get pods -n sentiment
 ```
 
-Дождитесь, пока у трёх Pod будут значения `1/1` и `Running`. В манифестах уже настроены ресурсы контейнера, проверки состояния и HPA с диапазоном от трёх до шести реплик.
+Дождитесь трёх Pod с `1/1` и `Running`. После этого приложение готово принимать запросы. Ресурсы контейнера, проверки состояния и HPA от трёх до шести реплик уже заданы в файлах проекта.
 
 ## 3. Проверить доступ к API
 
-В отдельном окне PowerShell запустите туннель и оставьте его работать:
+Откройте отдельное окно PowerShell и запустите туннель. Это окно должно оставаться открытым:
 
 ```powershell
 minikube tunnel -p sentiment-lab
 ```
 
-В основном окне посмотрите внешний адрес сервиса:
+Вернитесь в основное окно и посмотрите адрес приложения:
 
 ```powershell
 kubectl get service sentiment -n sentiment
 ```
 
-Используйте адрес из столбца `EXTERNAL-IP` и порт `8080`. Например, при адресе `127.0.0.1` откройте в браузере [http://127.0.0.1:8080/api/sentiment?text=hello](http://127.0.0.1:8080/api/sentiment?text=hello). Ожидается `{"sentiment":"positive"}`.
+Откройте в браузере адрес из `EXTERNAL-IP` с портом `8080`. Для адреса `127.0.0.1` ссылка будет такой: [http://127.0.0.1:8080/api/sentiment?text=hello](http://127.0.0.1:8080/api/sentiment?text=hello). В ответ должно прийти `{"sentiment":"positive"}`.
 
-Для проверки Ingress откройте ещё одно окно PowerShell:
+Теперь проверьте Ingress. В ещё одном окне PowerShell выполните:
 
 ```powershell
 kubectl port-forward service/traefik 18080:80 -n ingress
 ```
 
-Оставьте его открытым. В основном окне выполните:
+Это окно тоже оставьте открытым. В основном окне отправьте запрос:
 
 ```powershell
 curl.exe -i "http://localhost:18080/api/sentiment?text=hello"
 ```
 
-Повторите запрос несколько раз. В ответах должны быть HTTP 200 и `positive`. Заголовок `X-Pod-Name` показывает, какой Pod обработал запрос. Разные имена означают, что запросы попадают в разные реплики.
+В ответе должны быть HTTP 200 и `positive`. Повторите команду несколько раз и посмотрите на `X-Pod-Name`. Эта строка показывает имя Pod, который обработал запрос. Если имена меняются, запросы обрабатывают разные реплики.
 
 ## 4. Открыть Prometheus и Grafana
 
-Установите мониторинг через Helm. Для этой учебной установки команда задаёт пароль Grafana `sentiment-demo`:
+Установите Prometheus и Grafana через Helm. Пароль для входа в Grafana будет `sentiment-demo`:
 
 ```powershell
 helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
@@ -83,7 +85,7 @@ kubectl apply -f k8s/service-monitor.yaml
 kubectl get pods -n monitoring
 ```
 
-Дождитесь запуска компонентов мониторинга. В двух отдельных окнах PowerShell выполните по одной команде и оставьте их работать.
+Дождитесь запуска компонентов мониторинга. Затем откройте ещё два окна PowerShell. В каждом запустите одну из команд ниже и оставьте оба окна открытыми.
 
 Для Prometheus:
 
@@ -97,52 +99,52 @@ kubectl port-forward service/lab-monitoring-prometheus 19090:9090 -n monitoring
 kubectl port-forward service/lab-grafana 13000:80 -n monitoring
 ```
 
-Откройте [Prometheus Targets](http://localhost:19090/targets). Найдите цель приложения `sentiment`: после успешного сбора метрик у неё должен быть статус `UP`.
+Откройте [Prometheus Targets](http://localhost:19090/targets) и найдите приложение `sentiment`. Статус `UP` означает, что Prometheus получает его метрики.
 
-Откройте [Grafana](http://localhost:13000). Логин — `admin`, пароль — `sentiment-demo`.
+Войдите в [Grafana](http://localhost:13000) с логином `admin` и паролем `sentiment-demo`.
 
-Загрузите готовый дашборд через интерфейс:
+Добавьте дашборд из файла:
 
 1. Откройте **Dashboards**, затем **New → Import dashboard**.
 2. Загрузите файл `grafana/sentiment.json` из проекта.
 3. Если появится выбор источника данных, выберите Prometheus.
 4. Нажмите **Import**.
 
-На дашборде появятся запросы в секунду, задержка p95, CPU по Pod и число реплик HPA. Данные начнут поступать после запросов к API или нагрузочного теста. [Документация импорта дашборда](https://grafana.com/docs/grafana/latest/visualizations/dashboards/build-dashboards/import-dashboards/).
+Графики показывают запросы в секунду, задержку p95, CPU по Pod и число реплик HPA. Чтобы появились данные, отправьте несколько запросов к API или запустите нагрузочный тест. [Документация импорта дашборда](https://grafana.com/docs/grafana/latest/visualizations/dashboards/build-dashboards/import-dashboards/).
 
 ## 5. Запустить нагрузочный тест
 
-При первом запуске создайте ConfigMap с тестовым скриптом, затем запустите Job:
+Создайте ConfigMap со скриптом нагрузки и запустите Job с k6:
 
 ```powershell
 kubectl create configmap sentiment-load-script --from-file=load/load.js -n sentiment
 kubectl apply -f load/job.yaml
 ```
 
-Тест использует 60 виртуальных пользователей и работает пять минут. В другом окне можно наблюдать за HPA:
+Тест работает пять минут с 60 виртуальными пользователями. В другом окне посмотрите, как меняется число реплик HPA:
 
 ```powershell
 kubectl get hpa -n sentiment -w
 ```
 
-Для выхода из наблюдения нажмите **Ctrl+C**. Это не останавливает сам тест.
+Нажмите Ctrl+C, чтобы вернуться к вводу команд. Сам тест продолжит работать.
 
-Под нагрузкой проверьте число Pod и расход CPU:
+Во время теста посмотрите число Pod и загрузку CPU:
 
 ```powershell
 kubectl get pods -n sentiment
 kubectl top pods -n sentiment
 ```
 
-После завершения пяти минут посмотрите результаты:
+Когда тест закончится, откройте его лог:
 
 ```powershell
 kubectl logs job/sentiment-load -n sentiment
 ```
 
-HPA может увеличить число реплик до шести, если CPU превысит целевые 60%. После нагрузки число реплик постепенно вернётся к трём.
+Если CPU будет выше целевых 60%, HPA может увеличить число реплик до шести. После теста число реплик постепенно вернётся к трём.
 
-Для повторного теста удалите завершённый Job и запустите его снова. ConfigMap повторно создавать не нужно:
+Чтобы повторить тест, удалите завершённый Job и запустите его снова. ConfigMap со скриптом остаётся в кластере:
 
 ```powershell
 kubectl delete job sentiment-load -n sentiment
@@ -151,7 +153,7 @@ kubectl apply -f load/job.yaml
 
 ## 6. Завершить работу
 
-Остановите туннель и пробросы портов через **Ctrl+C** в соответствующих окнах. Затем остановите кластер:
+Нажмите Ctrl+C в окнах с туннелем и пробросами портов. Затем остановите кластер:
 
 ```powershell
 minikube stop -p sentiment-lab
