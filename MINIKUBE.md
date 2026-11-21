@@ -14,7 +14,7 @@ kubectl config use-context sentiment-lab
 kubectl get nodes
 ```
 
-В списке должен быть один узел со статусом `Ready`. Это значит, что локальный кластер готов к работе.
+Когда узел перейдёт в статус `Ready`, можно продолжать.
 
 Включите метрики CPU и загрузите образ из Docker в Minikube:
 
@@ -41,9 +41,9 @@ kubectl apply -f k8s/app.yaml
 kubectl get pods -n sentiment
 ```
 
-Дождитесь трёх Pod с `1/1` и `Running`. После этого приложение готово принимать запросы. Ресурсы контейнера, проверки состояния и HPA от трёх до шести реплик уже заданы в файлах проекта.
+Дождитесь трёх Pod с `1/1` и `Running`.
 
-## 3. Проверить доступ к API
+## 3. Открыть приложение
 
 Откройте отдельное окно PowerShell и запустите туннель. Это окно должно оставаться открытым:
 
@@ -59,7 +59,7 @@ kubectl get service sentiment -n sentiment
 
 Откройте в браузере адрес из `EXTERNAL-IP` с портом `8080`. Для адреса `127.0.0.1` ссылка будет такой: [http://127.0.0.1:8080/api/sentiment?text=hello](http://127.0.0.1:8080/api/sentiment?text=hello). В ответ должно прийти `{"sentiment":"positive"}`.
 
-Теперь проверьте Ingress. В ещё одном окне PowerShell выполните:
+Для доступа через Ingress выполните в новом окне PowerShell:
 
 ```powershell
 kubectl port-forward service/traefik 18080:80 -n ingress
@@ -71,7 +71,7 @@ kubectl port-forward service/traefik 18080:80 -n ingress
 curl.exe -i "http://localhost:18080/api/sentiment?text=hello"
 ```
 
-В ответе должны быть HTTP 200 и `positive`. Повторите команду несколько раз и посмотрите на `X-Pod-Name`. Эта строка показывает имя Pod, который обработал запрос. Если имена меняются, запросы обрабатывают разные реплики.
+Приложение вернёт HTTP 200 и `positive`. В заголовке `X-Pod-Name` можно посмотреть, какой Pod ответил.
 
 ## 4. Открыть Prometheus и Grafana
 
